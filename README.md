@@ -1,13 +1,9 @@
-supaharris-client
-======
+# supaharris-client
 
 **API client for the supaharris.com globular and star cluster database**
 
-.. image:: https://travis-ci.org/tlrh314/supaharris-client.svg?branch=master
-   :target: http://travis-ci.org/tlrh314/supaharris-client
-
-.. image:: https://img.shields.io/badge/license-AGPL3-brightgreen.svg
-   :target: https://github.com/tlrh314/supaharris-client/blob/master/LICENSE
+[![Software license](http://img.shields.io/badge/license-AGPL3-brightgreen.svg)](https://github.com/tlrh314/supaharris/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/tlrh314/supaharris-client.svg?branch=master)](https://travis-ci.org/tlrh314/supaharris-client)
 
 
 # Usage
@@ -15,4 +11,9 @@ supaharris-client
 ```python
 from supaharrisclient.models import SupaHarris
 
+sh = SupaHarris()
+sh.set_reference_list()
+
+print("\nRetrieved {0} references".format(len(sh.references)))
+print("Reference: {0}".format(sh.references[0]))
 ```
