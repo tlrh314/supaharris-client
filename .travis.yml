@@ -1,0 +1,24 @@
+# vim: sw=2 ts=2 sts=2 expandtab
+
+dist: bionic
+sudo: false
+language: python
+
+python:
+  - '3.7'
+  - '3.6'
+  - '3.5'
+
+install:
+  - pip install requests
+  - python setup.py install
+
+script:
+  - python tests/test_models.py
+
+notifications:
+  email:
+    recipients:
+      - halbesma@MPA-Garching.MPG.DE
+    on_success: change
+    on_failure: change
