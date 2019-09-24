@@ -12,8 +12,14 @@
 from supaharrisclient.models import SupaHarris
 
 sh = SupaHarris()
-sh.set_reference_list()
+sh.set_all_data()
+
+sh.print_parameters()
+sh.print_astro_object_classifications()
+sh.print_astro_objects()
 
 print("\nRetrieved {0} references".format(len(sh.references)))
-print("Reference: {0}".format(sh.references[0]))
+print("\nReference 0\n  {0:<25s}{1}".format("Key", "Value"))
+for k, v in sh.references[0].items():
+    print("  {0:<25s}{1}".format(k, v))
 ```
