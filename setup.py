@@ -22,10 +22,10 @@ setup(name='supaharrisclient',
       package_dir = {'supaharrisclient/': ''},
       packages=['supaharrisclient',],
       install_requires=[
-          'requests',
+          'numpy', 'requests',
       ],
       classifiers=[
-        'Development Status :: 1 - Planning',
+        'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Framework :: Django :: 2.2',
         'Intended Audience :: Science/Research',

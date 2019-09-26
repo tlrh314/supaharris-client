@@ -1,12 +1,5 @@
-import os
-import sys
-import glob
-
-__version__ = "0.0.1"
+__version__ = "1.0"
 VERSION = __version__
 
-# modules = glob.glob(os.path.dirname(__file__) + "/*.py")
-# __all__ = [
-#     os.path.basename(f)[:-3] for f in modules if os.path.isfile(f) and not f.endswith("__init__.py")
-# ]
-# print(__all__)
+__all__ = ["SupaHarrisClient"]
+from .client import SupaHarrisClient

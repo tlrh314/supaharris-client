@@ -1,21 +1,18 @@
 import sys
-import json
+import numpy
 import logging
 import requests
 from platform import python_version
 
-from supaharrisclient import __version__
+from . import __version__
+from .utils import response_to_json
+from .utils import print_progressbar
 
 
-def response_to_json(response):
-    return json.loads(response.content.decode("utf8"))
-
-
-class SupaHarris(object):
+class SupaHarrisClient(object):
     def __init__(self, base_url="https://www.supaharris.com/api/v1/",
-            loglevel=logging.DEBUG, verify=True):
+            loglevel=logging.DEBUG, set_all_data=True, verify=True):
         """ SupaHarris: a Python client implementation for the SupaHarris API
-        (Django REST Framework).
 
         Keyword arguments:
         base_url -- the base url of the API (could be localhost for development)
@@ -24,7 +21,7 @@ class SupaHarris(object):
 
         # Set up a logger to 'print' to stdout
         self.logger = logging.getLogger(__file__)
-        self.logger.setLevel(loglevel)
+        self.logger.level = loglevel
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(loglevel)
         formatter = logging.Formatter("%(message)s")
@@ -42,7 +39,7 @@ class SupaHarris(object):
             import urllib3
             urllib3.disable_warnings()
 
-        url_params = "?format=json"  # Size not yet implemented for all ViewSets
+        url_params = "?format=json&length=1000"
         self.reference_list = "{0}catalogue/reference/{1}".format(
             self.base_url, url_params)
         self.astro_object_list = "{0}catalogue/astro_object/{1}".format(
@@ -52,7 +49,6 @@ class SupaHarris(object):
         self.parameter_list = "{0}catalogue/parameter/{1}".format(
             self.base_url, url_params)
         # Takes roughly 2 seconds to process a request /w 1000 Observation instances
-        url_params = "?format=json&size=1000"
         self.observation_list = "{0}catalogue/observation/{1}".format(
             self.base_url, url_params)
 
@@ -62,8 +58,20 @@ class SupaHarris(object):
                 __version__, str(python_version()))
         }
 
+        if set_all_data: self.set_all_data()
+
     def set_reference_list(self):
+        self.logger.info("self.references")
         self.references = self.get_list(self.reference_list, recursive=True)
+
+        self.references_clean = numpy.array(
+            [
+                (r["id"], r["first_author"], getattr(r, "year", -1) if "year" in r.keys() else "",
+                 r["title"], r["ads_url"])
+                    for r in self.references
+            ], dtype=[("id", "int"), ("first_author", "|U64"), ("year", "int"),
+                      ("title", "|U128"), ("ads_url", "|U128")]
+        )
 
     def print_references(self):
         self.logger.info("\nRetrieved {0} references\n".format(len(self.references)))
@@ -77,7 +85,15 @@ class SupaHarris(object):
         self.logger.info("-"*79)
 
     def set_astro_object_list(self):
+        self.logger.info("astro_objects")
         self.astro_objects = self.get_list(self.astro_object_list, recursive=True)
+
+        self.astro_objects_clean = numpy.array(
+            [
+                (ao["id"], ao["name"], ao["altname"] if ao["altname"] else "")
+                    for ao in self.astro_objects
+            ], dtype=[("id", "int"), ("name", "|U16"), ("altname", "|U16")]
+        )
 
     def print_astro_objects(self):
         self.logger.info("\nRetrieved {0} astro_objects\n".format(len(self.astro_objects)))
@@ -91,6 +107,7 @@ class SupaHarris(object):
         self.logger.info("-"*79)
 
     def set_astro_object_classification_list(self):
+        self.logger.info("self.astro_object_classifications")
         self.astro_object_classifications = self.get_list(
             self.astro_object_classifcation_list, recursive=True)
 
@@ -106,7 +123,14 @@ class SupaHarris(object):
         self.logger.info("-"*79)
 
     def set_parameter_list(self):
+        self.logger.info("self.parameters")
         self.parameters = self.get_list(self.parameter_list, recursive=True)
+
+        self.parameters_clean = numpy.array(
+            [
+                (p["id"], p["name"]) for p in self.parameters
+            ], dtype=[("id", "int"), ("name", "|U16")]
+        )
 
     def print_parameters(self):
         self.logger.info("\nRetrieved {0} parameters\n".format(len(self.parameters)))
@@ -118,9 +142,55 @@ class SupaHarris(object):
             self.logger.info("  {0:<5d}{1:<15s}{2}".format(p["id"], p["name"], p["description"]))
         self.logger.info("-"*79)
 
-    def set_observation_list(self):
-        # TODO: if response.data["count"] == len(self.observations) then don't update?
-        self.observations = self.get_list(self.observation_list, recursive=True)
+    def set_observation_list(self, refresh=False):
+        self.logger.info("self.observations")
+
+        # First get 1 observation from the observation_list (~150 ms) to check the count.
+        # No need to recursively GET observation_list if we already have all observations.
+        for l in self.observation_list.split("&"):
+            if "length=" in l: break
+        one_observation = self.observation_list.replace(l, "length=1")
+        response = requests.get(one_observation, headers=self.headers, verify=self.verify)
+        if response.status_code != 200:
+            self.logger.error("  Could not retrieve uri = '{0}'. Better stop.".format(uri))
+            sys.exit(1)
+        count = response_to_json(response)["count"]
+        if hasattr(self, "observations") and len(self.observations) == count and not refresh:
+            self.logger.info("Alreay have all Observation instances. No need to retrieve.")
+        else:
+            # There is a need to recursively GET all observations. Take ~2 seconds per page /w length=1000
+            self.observations = self.get_list(self.observation_list, recursive=True)
+
+        observations_array = numpy.array(
+            [
+                (o["astro_object"]["id"], o["astro_object"]["id"],
+                 o["parameter"]["id"], o["parameter"]["id"],
+                 o["value"], o["sigma_up"] if o["sigma_up"] else numpy.nan,
+                 o["sigma_down"] if o["sigma_down"] else numpy.nan)
+                    for o in self.observations
+            ], dtype=[
+                ("ao_id", "int"), ("ao_name", "|U16"), ("p_id", "int"), ("p_name", "|U16"),
+                ("value", "|U16"), ("sigma_up", "|U16"), ("sigma_down", "|U16")
+            ]
+        )
+        dtype = [(p["name"], "|U16") for p in self.parameters]
+        self.observations_clean = numpy.empty(len(self.astro_objects), dtype=dtype)
+        # self.observations_clean[:] = numpy.nan
+        for i, (ao_id, ao_name) in enumerate(zip(self.astro_objects_clean["id"], self.astro_objects_clean["name"])):
+            for j, (p_id, p_name) in enumerate(zip(self.parameters_clean["id"], self.parameters_clean["name"])):
+                # if i < 2: print("{:>4d}{:>4d}{:>16s}{:>4d}{:>4d}{:>16s} ".format(
+                #     i, ao_id, ao_name, j, p_id, p_name), end="")
+
+                has_obs, = numpy.where(
+                    (observations_array["p_id"] == p_id)
+                    & (observations_array["ao_id"] == ao_id)
+                )
+                if len(has_obs) >= 1:
+                    # TODO: at a later point in time we should handle multiple
+                    # observations of the same parameter / astro_object combination...
+                    self.observations_clean[i][p_name] = observations_array["value"][has_obs][0]
+                # if i < 2: print(has_obs, observations_array["value"][has_obs], self.observations_clean[i][p_name])
+            # if i < 2: print("")
 
     def set_all_data(self):
         self.set_parameter_list()
@@ -151,7 +221,7 @@ class SupaHarris(object):
         results += data["results"]
         total_count += len(results)
         self.logger.debug("  retrieved {0}/{1} instances".format(total_count, count))
-        self.logger.debug("  next = {0}".format(next))
+        self.logger.debug("  next = {0}{1}".format(next, "\n" if not next else ""))
 
         if next and recursive:
             results += self.get_list(next, recursive=True, total_count=total_count)
@@ -159,44 +229,4 @@ class SupaHarris(object):
         return results
 
     def __str__(self):
-        return "SupaHarris API client for '{0}'".format(self.base_url)
-
-
-class Parameter(object):
-    def __init__(self):
-        pass
-
-
-class Reference(object):
-    def __init__(self):
-        pass
-
-
-class AstroObjectClassification(object):
-    def __init__(self):
-        pass
-
-
-class AstroObject(object):
-    def __init__(self):
-        pass
-
-
-class Profile(object):
-    def __init__(self):
-        pass
-
-
-class Auxiliary(object):
-    def __init__(self):
-        pass
-
-
-class Observation(object):
-    def __init__(self):
-        pass
-
-
-class Rank(object):
-    def __init__(self):
-        pass
+        return "SupaHarrisClient for '{0}'".format(self.base_url)
