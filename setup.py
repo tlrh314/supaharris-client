@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os
-from distutils.core import setup
+from setuptools import setup
 
 from supaharrisclient import __version__
 
@@ -21,6 +21,9 @@ setup(name='supaharrisclient',
       url='https://github.com/tlrh314/supaharris-client',
       package_dir = {'supaharrisclient/': ''},
       packages=['supaharrisclient',],
+      install_requires=[
+          'requests',
+      ],
       classifiers=[
         'Development Status :: 1 - Planning',
         'Environment :: Console',
