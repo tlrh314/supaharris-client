@@ -13,7 +13,7 @@ def response_to_json(response):
 
 class SupaHarris(object):
     def __init__(self, base_url="https://www.supaharris.com/api/v1/",
-            loglevel=logging.DEBUG):
+            loglevel=logging.DEBUG, verify=True):
         """ SupaHarris: a Python client implementation for the SupaHarris API
         (Django REST Framework).
 
@@ -33,6 +33,15 @@ class SupaHarris(object):
         self.logger.addHandler(handler)
 
         self.base_url = base_url
+
+        # If we run locally (development), then we GET 443 /w self-signed certificate.
+        # We tell the requests library not verify the ssl certificate, and we suppress
+        # the InsecureRequestWarning.
+        self.verify = verify
+        if not self.verify:
+            import urllib3
+            urllib3.disable_warnings()
+
         url_params = "?format=json"  # Size not yet implemented for all ViewSets
         self.reference_list = "{0}catalogue/reference/{1}".format(
             self.base_url, url_params)
@@ -129,7 +138,7 @@ class SupaHarris(object):
 
         self.logger.debug("GET {0}".format(uri))
 
-        response = requests.get(uri, headers=self.headers)
+        response = requests.get(uri, headers=self.headers, verify=self.verify)
         if response.status_code != 200:
             self.logger.error("  Could not retrieve uri = '{0}'. Better stop.".format(uri))
             sys.exit(1)

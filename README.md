@@ -6,7 +6,7 @@
 [![Build Status](https://travis-ci.org/tlrh314/supaharris-client.svg?branch=master)](https://travis-ci.org/tlrh314/supaharris-client)
 
 
-# Usage
+# Usage with https://www.supaharris.com
 
 ```python
 from supaharrisclient.models import SupaHarris
@@ -22,4 +22,15 @@ print("\nRetrieved {0} references".format(len(sh.references)))
 print("\nReference 0\n  {0:<25s}{1}".format("Key", "Value"))
 for k, v in sh.references[0].items():
     print("  {0:<25s}{1}".format(k, v))
+```
+
+# Usage with local development setup
+```python
+
+from supaharrisclient.models import SupaHarris
+
+sh = SupaHarris(base_url="https://nginx/api/v1/", verify=False)
+
+sh.set_parameter_list()
+sh.print_parameters()
 ```
