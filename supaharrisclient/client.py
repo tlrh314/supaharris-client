@@ -61,17 +61,21 @@ class SupaHarrisClient(object):
         if set_all_data: self.set_all_data()
 
     def set_reference_list(self):
-        self.logger.info("self.references")
-        self.references = self.get_list(self.reference_list, recursive=True)
+        self.logger.info("Setting all Reference instances ...")
+        self.references_json = self.get_list(self.reference_list, recursive=True)
+        self.logger.info("  self.references_json is now available")
 
-        self.references_clean = numpy.array(
+        self.references = numpy.array(
             [
                 (r["id"], r["first_author"], getattr(r, "year", -1) if "year" in r.keys() else "",
                  r["title"], r["ads_url"])
-                    for r in self.references
+                    for r in self.references_json
             ], dtype=[("id", "int"), ("first_author", "|U64"), ("year", "int"),
                       ("title", "|U128"), ("ads_url", "|U128")]
         )
+        self.logger.info("  self.references is now available")
+        self.logger.info("  len(self.references) = {0}".format(len(self.references)))
+        self.logger.info("Done setting all Reference instances.\n")
 
     def print_references(self):
         self.logger.info("\nRetrieved {0} references\n".format(len(self.references)))
@@ -79,21 +83,25 @@ class SupaHarrisClient(object):
         self.logger.info("-"*79)
         self.logger.info("  {0:<5s}{1} ({2})".format("id", "first_author", "year"))
         self.logger.info("-"*79)
-        for r in self.references:
+        for r in self.references_json:
             self.logger.info("  {0:<5d}{1} ({2})".format(
                 r["id"], r["first_author"], r["year"] if "year" in r.keys() else ""))
         self.logger.info("-"*79)
 
     def set_astro_object_list(self):
-        self.logger.info("astro_objects")
-        self.astro_objects = self.get_list(self.astro_object_list, recursive=True)
+        self.logger.info("Setting all AstroObject instances ...")
+        self.astro_objects_json = self.get_list(self.astro_object_list, recursive=True)
+        self.logger.info("  self.astro_objects_json is now available")
 
-        self.astro_objects_clean = numpy.array(
+        self.astro_objects = numpy.array(
             [
                 (ao["id"], ao["name"], ao["altname"] if ao["altname"] else "")
-                    for ao in self.astro_objects
+                    for ao in self.astro_objects_json
             ], dtype=[("id", "int"), ("name", "|U16"), ("altname", "|U16")]
         )
+        self.logger.info("  self.astro_objects is now available")
+        self.logger.info("  len(self.astro_objects) = {0}".format(len(self.astro_objects)))
+        self.logger.info("Done setting all AstroObject instances.\n")
 
     def print_astro_objects(self):
         self.logger.info("\nRetrieved {0} astro_objects\n".format(len(self.astro_objects)))
@@ -101,15 +109,18 @@ class SupaHarrisClient(object):
         self.logger.info("-"*79)
         self.logger.info("  {0:<5s}{1:<15s}{2}".format("id", "name", "altname"))
         self.logger.info("-"*79)
-        for o in self.astro_objects:
+        for o in self.astro_objects_json:
             self.logger.info("  {0:<5d}{1:<15s}{2}".format(
                 o["id"], o["name"], o["altname"] if o["altname"] else ""))
         self.logger.info("-"*79)
 
     def set_astro_object_classification_list(self):
-        self.logger.info("self.astro_object_classifications")
+        self.logger.info("Setting all AstroObjectClassification instances ...")
         self.astro_object_classifications = self.get_list(
             self.astro_object_classifcation_list, recursive=True)
+        self.logger.info("  self.astro_object_classifications is now available")
+        self.logger.info("  len(self.astro_object_classifications) = {0}".format(len(self.astro_object_classifications)))
+        self.logger.info("Done setting all AstroObjectClassification instances.\n")
 
     def print_astro_object_classifications(self):
         self.logger.info("\nRetrieved {0} astro_object_classifications\n".format(
@@ -123,14 +134,18 @@ class SupaHarrisClient(object):
         self.logger.info("-"*79)
 
     def set_parameter_list(self):
-        self.logger.info("self.parameters")
-        self.parameters = self.get_list(self.parameter_list, recursive=True)
+        self.logger.info("Setting all Parameter instances ...")
+        self.parameters_json = self.get_list(self.parameter_list, recursive=True)
+        self.logger.info("  self.parameters_json is now available")
 
-        self.parameters_clean = numpy.array(
+        self.parameters = numpy.array(
             [
-                (p["id"], p["name"]) for p in self.parameters
+                (p["id"], p["name"]) for p in self.parameters_json
             ], dtype=[("id", "int"), ("name", "|U16")]
         )
+        self.logger.info("  self.parameters is now available")
+        self.logger.info("  len(self.parameters) = {0}".format(len(self.parameters)))
+        self.logger.info("Done setting all Parameter instances.\n")
 
     def print_parameters(self):
         self.logger.info("\nRetrieved {0} parameters\n".format(len(self.parameters)))
@@ -138,12 +153,18 @@ class SupaHarrisClient(object):
         self.logger.info("-"*79)
         self.logger.info("  {0:<5s}{1:<15s}{2}".format("id", "name", "description"))
         self.logger.info("-"*79)
-        for p in self.parameters:
+        for p in self.parameters_json:
             self.logger.info("  {0:<5d}{1:<15s}{2}".format(p["id"], p["name"], p["description"]))
         self.logger.info("-"*79)
 
     def set_observation_list(self, refresh=False):
-        self.logger.info("self.observations")
+        self.logger.info("Setting all Observation instances ...")
+
+        if not hasattr(self, "parameters"):
+            self.set_parameter_list()
+
+        if not hasattr(self, "astro_objects"):
+            self.set_astro_object_list()
 
         # First get 1 observation from the observation_list (~150 ms) to check the count.
         # No need to recursively GET observation_list if we already have all observations.
@@ -156,10 +177,11 @@ class SupaHarrisClient(object):
             sys.exit(1)
         count = response_to_json(response)["count"]
         if hasattr(self, "observations") and len(self.observations) == count and not refresh:
-            self.logger.info("Alreay have all Observation instances. No need to retrieve.")
+            self.logger.info("  self.observations_json was already available, and (length) did not change")
         else:
             # There is a need to recursively GET all observations. Take ~2 seconds per page /w length=1000
-            self.observations = self.get_list(self.observation_list, recursive=True)
+            self.observations_json = self.get_list(self.observation_list, recursive=True)
+            self.logger.info("  self.observations_json is now available")
 
         observations_array = numpy.array(
             [
@@ -167,17 +189,17 @@ class SupaHarrisClient(object):
                  o["parameter"]["id"], o["parameter"]["id"],
                  o["value"], o["sigma_up"] if o["sigma_up"] else numpy.nan,
                  o["sigma_down"] if o["sigma_down"] else numpy.nan)
-                    for o in self.observations
+                    for o in self.observations_json
             ], dtype=[
                 ("ao_id", "int"), ("ao_name", "|U16"), ("p_id", "int"), ("p_name", "|U16"),
                 ("value", "|U16"), ("sigma_up", "|U16"), ("sigma_down", "|U16")
             ]
         )
         dtype = [(p["name"], "|U16") for p in self.parameters]
-        self.observations_clean = numpy.empty(len(self.astro_objects), dtype=dtype)
-        # self.observations_clean[:] = numpy.nan
-        for i, (ao_id, ao_name) in enumerate(zip(self.astro_objects_clean["id"], self.astro_objects_clean["name"])):
-            for j, (p_id, p_name) in enumerate(zip(self.parameters_clean["id"], self.parameters_clean["name"])):
+        self.observations = numpy.empty(len(self.astro_objects), dtype=dtype)
+        # self.observations[:] = numpy.nan
+        for i, (ao_id, ao_name) in enumerate(zip(self.astro_objects["id"], self.astro_objects["name"])):
+            for j, (p_id, p_name) in enumerate(zip(self.parameters["id"], self.parameters["name"])):
                 # if i < 2: print("{:>4d}{:>4d}{:>16s}{:>4d}{:>4d}{:>16s} ".format(
                 #     i, ao_id, ao_name, j, p_id, p_name), end="")
 
@@ -188,9 +210,12 @@ class SupaHarrisClient(object):
                 if len(has_obs) >= 1:
                     # TODO: at a later point in time we should handle multiple
                     # observations of the same parameter / astro_object combination...
-                    self.observations_clean[i][p_name] = observations_array["value"][has_obs][0]
-                # if i < 2: print(has_obs, observations_array["value"][has_obs], self.observations_clean[i][p_name])
+                    self.observations[i][p_name] = observations_array["value"][has_obs][0]
+                # if i < 2: print(has_obs, observations_array["value"][has_obs], self.observations[i][p_name])
             # if i < 2: print("")
+        self.logger.info("  self.observations is now available")
+        self.logger.info("  len(self.observations) = {0}".format(len(self.observations)))
+        self.logger.info("Done setting all Observation instances.\n")
 
     def set_all_data(self):
         self.set_parameter_list()
