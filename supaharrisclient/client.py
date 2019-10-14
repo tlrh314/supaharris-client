@@ -195,10 +195,11 @@ class SupaHarrisClient(object):
                 ("value", "|U16"), ("sigma_up", "|U16"), ("sigma_down", "|U16")
             ]
         )
-        dtype = [(p["name"], "|U16") for p in self.parameters]
+        dtype = [("name", "|U16" )] + [(p["name"], "|U16") for p in self.parameters]
         self.observations = numpy.empty(len(self.astro_objects), dtype=dtype)
         # self.observations[:] = numpy.nan
         for i, (ao_id, ao_name) in enumerate(zip(self.astro_objects["id"], self.astro_objects["name"])):
+            self.observations[i]["name"] = ao_name
             for j, (p_id, p_name) in enumerate(zip(self.parameters["id"], self.parameters["name"])):
                 # if i < 2: print("{:>4d}{:>4d}{:>16s}{:>4d}{:>4d}{:>16s} ".format(
                 #     i, ao_id, ao_name, j, p_id, p_name), end="")
