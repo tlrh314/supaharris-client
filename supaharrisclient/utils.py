@@ -1,5 +1,7 @@
+import os
 import sys
 import json
+from contextlib import contextmanager
 
 
 def response_to_json(response):
@@ -18,3 +20,21 @@ def print_progressbar(i, N, whitespace=""):
 
     if i == (N-1):
         print(" .. done")
+
+
+@contextmanager
+def suppress_stdout():
+    try:
+        import numpy
+        HAS_NUMPY = True
+    except ImportError:
+        HAS_NUMPY = False
+    with open(os.devnull, "w") as devnull:
+        if HAS_NUMPY: old_settings = numpy.seterr(all="ignore")
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            if HAS_NUMPY: numpy.seterr(**old_settings)
