@@ -2,6 +2,8 @@ import sys
 import numpy
 import logging
 import requests
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 from platform import python_version
 
 from . import __version__
@@ -21,6 +23,7 @@ class SupaHarrisClient(object):
 
         # Set up a logger to 'print' to stdout
         self.logger = logging.getLogger(__file__)
+        self.logger.propagate = False
         self.logger.level = loglevel
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(loglevel)
