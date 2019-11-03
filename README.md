@@ -19,8 +19,13 @@ shc.print_astro_objects()
 
 print("\nRetrieved {0} references".format(len(shc.references)))
 print("\nReference 0\n  {0:<25s}{1}".format("Key", "Value"))
-for k, v in shc.references[0].items():
+for k, v in shc.references_json[0].items():
     print("  {0:<25s}{1}".format(k, v))
+
+print("shc.observations.shape:\n{}\n".format(shc.observations.shape))
+print("shc.observations.dtype:\n{}\n".format(shc.observations.dtype))
+print("shc.observations['RA']:\n{}\n".format(shc.observations['RA']))
+print("shc.observations_ref['RA']:\n{}\n".format(shc.observations_ref['RA']))
 ```
 
 # Usage with local development setup
