@@ -189,17 +189,21 @@ class SupaHarrisClient(object):
         observations_array = numpy.array(
             [
                 (o["astro_object"]["id"], o["astro_object"]["id"],
+                 o["reference"]["id"], o["reference"]["bib_code"],
                  o["parameter"]["id"], o["parameter"]["id"],
                  o["value"], o["sigma_up"] if o["sigma_up"] else numpy.nan,
                  o["sigma_down"] if o["sigma_down"] else numpy.nan)
                     for o in self.observations_json
             ], dtype=[
-                ("ao_id", "int"), ("ao_name", "|U16"), ("p_id", "int"), ("p_name", "|U16"),
+                ("ao_id", "int"), ("ao_name", "|U16"),
+                ("ref_id", "int"), ("ref_bib_code", "|U16"),
+                ("p_id", "int"), ("p_name", "|U16"),
                 ("value", "|U16"), ("sigma_up", "|U16"), ("sigma_down", "|U16")
             ]
         )
         dtype = [("name", "|U16" )] + [(p["name"], "|U16") for p in self.parameters]
         self.observations = numpy.empty(len(self.astro_objects), dtype=dtype)
+        self.observations_ref = numpy.empty(len(self.astro_objects), dtype=dtype)
         # self.observations[:] = numpy.nan
         for i, (ao_id, ao_name) in enumerate(zip(self.astro_objects["id"], self.astro_objects["name"])):
             self.observations[i]["name"] = ao_name
@@ -215,6 +219,7 @@ class SupaHarrisClient(object):
                     # TODO: at a later point in time we should handle multiple
                     # observations of the same parameter / astro_object combination...
                     self.observations[i][p_name] = observations_array["value"][has_obs][0]
+                    self.observations_ref[i][p_name] = observations_array["ref_bib_code"][has_obs][0]
                 # if i < 2: print(has_obs, observations_array["value"][has_obs], self.observations[i][p_name])
             # if i < 2: print("")
         self.logger.info("  self.observations is now available")
