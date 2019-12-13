@@ -36,3 +36,9 @@ from supaharrisclient import SupaHarrisClient
 shc = SupaHarrisClient(base_url="https://nginx/api/v1/", verify=False)
 shc.print_parameters()
 ```
+
+
+## Pushing new version to PyPi
+- `git tag -t v1.0`
+- `python setup.py sdist bdist_wheel`
+- `twine upload dist/*`
